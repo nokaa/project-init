@@ -53,6 +53,7 @@ fn main() {
         fs::create_dir_all(name).unwrap();
         change_dir(name).unwrap();
         fs::create_dir_all("src").unwrap();
+        init_git();
     } else if !dir && cargo { // using cargo
         let cmd = process::Command::new("cargo")
             .arg("new")
@@ -81,14 +82,32 @@ fn main() {
         }
     } else { // Use current directory manually
         fs::create_dir_all("src").unwrap();
+        init_git();
     }
 
     project_files(name, &license_path[..]);
 }
 
+fn init_git() {
+        let cmd = process::Command::new("git")
+            .arg("init")
+            .output()
+            .expect("Failed to initialize git repository!");
+        if !cmd.status.success() {
+            println!("stderr: {}", String::from_utf8_lossy(&cmd.stderr));
+            // We can exit here, but `git init` failing likely means that
+            // there is already a git repo here
+            //process::exit(1);
+        }
+}
+
 fn project_files(name: &str, license_path: &str) {
     copy_file(&license_path[..], "LICENSE").unwrap();
-    write_file("README.md", name.as_bytes()).unwrap();
+
+    // Create README.md and write title
+    let mut readme = vec![b'#', b' '];
+    readme.extend_from_slice(&name.as_bytes());
+    write_file("README.md", &readme[..]).unwrap();
 }
 
 fn read_file(filename: &str) -> Result<Vec<u8>, io::Error> {
